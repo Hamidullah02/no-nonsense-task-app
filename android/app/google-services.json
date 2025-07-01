@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "209606807643",
+    "project_id": "noslack-68473",
+    "storage_bucket": "noslack-68473.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:209606807643:android:ca3b5bc7fa622941126f7e",
+        "android_client_info": {
+          "package_name": "com.example.noslack"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBFrp_SjEm9iU08Ul9q0zw_WtmbraslMJQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
