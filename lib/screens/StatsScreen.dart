@@ -6,6 +6,12 @@ class StatsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(body: Center(child: Text("stats")));
+    return MaterialApp(
+        home: Scaffold(
+            body: Center(
+                child: Text("stats"),
+            ),
+        ),
+    );
   }
 }

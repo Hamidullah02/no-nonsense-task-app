@@ -1,8 +1,14 @@
+
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:noslack/riverpod/timeprovider.dart';
 import '../models/taskmodel.dart';
+import '../widgets/animated_searchbar.dart';
 import '../widgets/home_widget/addTask_widget.dart';
 import '../widgets/home_widget/taskCard_Widget.dart';
+import '../widgets/timerdisplay_widget.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -13,11 +19,29 @@ class HomePage extends ConsumerStatefulWidget {
 
 class _HomePageState extends ConsumerState<HomePage> {
   final TextEditingController searchController = TextEditingController();
+  late List<Task> filteredtasks;
+
+  @override
+  void initState() {
+    super.initState();
+    filteredtasks = [];
+  }
 
   @override
   Widget build(BuildContext context) {
     final taskList = ref.watch(taskListProvider);
-
+    final activeTaskId = ref.watch(activeTimerProvider);
+    final timerState =
+    activeTaskId != null
+        ? ref.watch(timerStateProvider(activeTaskId))
+        : null;
+    final focusedTasks = taskList.where((task) => task.id == activeTaskId);
+if(searchController.text.isEmpty){
+  filteredtasks = taskList;
+}else{
+  final query = searchController .text.trim().toLowerCase();
+  filteredtasks = taskList.where((task)=> task.title.toLowerCase().contains(query)).toList();
+}
     return Scaffold(
       backgroundColor: const Color(0xFF121212),
       body: SafeArea(
@@ -29,29 +53,96 @@ class _HomePageState extends ConsumerState<HomePage> {
               Center(
                 child: Column(
                   children: [
-                    const Text(
-                      "Tasks",
-                      style: TextStyle(fontSize: 30, color: Colors.white),
+                    Container(
+                      width: double.infinity,
+                      child: Stack(
+                        children: [
+                          Center(
+                            child: const Text(
+                              "Tasks",
+                              style: TextStyle(
+                                fontSize: 30,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            right: 10,
+                            top: 0,
+                            child: AnimatedSearch(
+                              width: 0.7,
+                              textEditingController: searchController,
+                              startIcon: Icons.search,
+                              closeIcon: Icons.close,
+                              iconColor: Colors.white,
+                              cursorColor: Colors.white,
+                              onChanged: (String value) {
+                                setState(() {
+                                  if (value.trim().isEmpty) {
+                                    filteredtasks = taskList;
+                                  } else {
+                                    filteredtasks =
+                                        taskList
+                                            .where(
+                                              (task) => task.title
+                                              .toLowerCase()
+                                              .contains(
+                                            value.toLowerCase(),
+                                          ),
+                                        )
+                                            .toList();
+                                  }
+                                });
+                              },
+                              decoration: InputDecoration(
+                                hintText: 'Search',
+                                hintStyle: TextStyle(
+                                  color: Color.fromARGB(179, 95, 238, 251),
+                                ),
+                                border: InputBorder.none,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    SizedBox(
-                      width: MediaQuery.of(context).size.width * 0.8,
-                      height: MediaQuery.of(context).size.height * .04,
-                      child: SearchBar(
-                        controller: searchController,
-                        hintText: 'Search tasks...',
-                        backgroundColor: WidgetStateProperty.all(
-                          Color(0xFF2A2A45),
+                    SizedBox(height: 8,),
+                    InkWell(
+                      onTap: () => context.go('/focus'),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Color.fromARGB(255, 9, 131, 147),
+                          borderRadius: BorderRadius.circular(15),
                         ),
-                        hintStyle: WidgetStateProperty.all(
-                          TextStyle(color: Colors.grey[400]),
-                        ),
-                        shape: WidgetStateProperty.all(
-                          RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
+                        child:
+                        focusedTasks.isEmpty
+                            ? SizedBox(height: 0)
+                            : Container(
+                          padding: EdgeInsets.all(5),
+                          child: Row(
+                            mainAxisAlignment:
+                            MainAxisAlignment.spaceBetween,
+                            children: [
+                              CircleAvatar(
+
+                                backgroundColor: Colors.red,
+                                radius: 7,
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                ),
+                                child: Text(focusedTasks.first.title),
+                              ),
+                              TimerDisplay(
+                                duration: timerState!.remaining,
+                                size: 15.0,
+                                horizontalsize: 40,
+                                timerdivpadding: 1,
+                              ),
+                            ],
                           ),
                         ),
-                        leading: Icon(Icons.search, color: Colors.white),
-                        // onChanged: search(),
                       ),
                     ),
                   ],
@@ -60,10 +151,10 @@ class _HomePageState extends ConsumerState<HomePage> {
               const SizedBox(height: 12),
               Expanded(
                 child: ListView.builder(
-                  itemCount: taskList.length,
+                  itemCount: filteredtasks.length,
                   itemBuilder: (_, i) {
                     return Dismissible(
-                      key: Key(taskList[i].title),
+                      key: Key(filteredtasks[i].title),
                       background: Stack(
                         children: [
                           Container(
@@ -116,16 +207,16 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ),
                       confirmDismiss: (direction) async {
                         if (direction == DismissDirection.startToEnd) {
-                          ref.read(taskListProvider.notifier).toggleDone(i);
+                          ref.read(taskListProvider.notifier).toggleDoneById(filteredtasks[i].id);
                           return false;
                         }
                         if (direction == DismissDirection.endToStart) {
-                          ref.read(taskListProvider.notifier).removeTask(i);
+                          ref.read(taskListProvider.notifier).removeTask(filteredtasks[i].id);
                           return true;
                         }
                         return false;
                       },
-                      child: TaskCard(task: taskList[i], index: i),
+                      child: TaskCard(task: filteredtasks[i], index: i),
                     );
                   },
                 ),
@@ -135,68 +226,23 @@ class _HomePageState extends ConsumerState<HomePage> {
         ),
       ),
 
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton(
-            backgroundColor: Color(0xFF2A2A45),
-            foregroundColor: Colors.white,
-            onPressed: () async {
-              final newTask = await showDialog<Task>(
-                context: context,
-                builder: (context) => const searchBar(),
-              );
-            },
-            child: Icon(Icons.search),
-          ),
-          SizedBox(height: 20),
-          FloatingActionButton(
-            hoverColor: Colors.greenAccent,
-            foregroundColor: Colors.white,
-            onPressed: () async {
-              ref.read(selectedtagProvider.notifier).state = null;
-              final newTask = await showDialog<Task>(
-                context: context,
-                builder: (context) => const AddTaskWidget(),
-              );
-              if (newTask != null) {
-                ref.read(taskListProvider.notifier).addTask(newTask);
-              }
-            },
-            child: Icon(Icons.add),
-          ),
-        ],
+      floatingActionButton:
+      FloatingActionButton(
+        hoverColor: Colors.greenAccent,
+        foregroundColor: Colors.white,
+        onPressed: () async {
+          ref.read(selectedtagProvider.notifier).state = null;
+          final newTask = await showDialog<Task>(
+            context: context,
+            builder: (context) => const AddTaskWidget(),
+          );
+          if (newTask != null) {
+            ref.read(taskListProvider.notifier).addTask(newTask);
+          }
+        },
+        child: Icon(Icons.add),
       ),
     );
   }
 }
 
-class searchBar extends StatefulWidget {
-  const searchBar({super.key});
-
-  @override
-  State<searchBar> createState() => _searchBarState();
-}
-
-class _searchBarState extends State<searchBar> {
-  final TextEditingController searchController = TextEditingController();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: MediaQuery.of(context).size.width * 0.08,
-      height: MediaQuery.of(context).size.height * .04,
-      child: SearchBar(
-        controller: searchController,
-        hintText: 'Search tasks...',
-        backgroundColor: WidgetStateProperty.all(Color(0xFF2A2A45)),
-        hintStyle: WidgetStateProperty.all(TextStyle(color: Colors.grey[400])),
-        shape: WidgetStateProperty.all(
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        ),
-        leading: Icon(Icons.search, color: Colors.white),
-        // onChanged: search(),
-      ),
-    );
-  }
-}

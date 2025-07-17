@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:noslack/riverpod/timeprovider.dart';
 import '../../models/taskmodel.dart';
-import '../../screens/focusScreen.dart';
 import 'editTask_widget.dart';
 
-class TaskCard extends StatelessWidget {
+class TaskCard extends ConsumerWidget {
   final Task task;
-  final index;
+  final int index;
 
-  const TaskCard({super.key, required this.task, this.index});
+  const TaskCard({super.key, required this.task, required this.index});
 
-  Widget build(BuildContext context) {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     return InkWell(
       hoverColor: Colors.transparent,
       onTap: () {
@@ -60,9 +62,8 @@ class TaskCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 8),
-
                     Text(
-                      '#${task.tags}',
+                      task.tags,
                       style: const TextStyle(
                         fontSize: 14,
                         color: Colors.blueAccent,
@@ -72,17 +73,37 @@ class TaskCard extends StatelessWidget {
                 ),
               ),
               Text(
-                'Due: ${task.dueDate}',
+                'Due: ${task.dueDate ?? 'No date'}',
                 style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
-              SizedBox(width: 30),
+              const SizedBox(width: 30),
               SizedBox(
                 height: 50,
                 width: 60,
                 child: ElevatedButton(
-                  onPressed: () {
-                    context.go('/focus');
-                  },
+                  onPressed:
+                      task.focusTime != 'set time' && task.focusTime.isNotEmpty
+                          ? () {
+                            final activeTimer = ref.read(activeTimerProvider);
+                            if (activeTimer != null && activeTimer != task.id) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Another task timer is already running!',
+                                  ),
+                                  backgroundColor: Colors.orange,
+                                ),
+                              );
+                              return;
+                            }
+
+                            ref.read(currentTimerProvider.notifier).state =
+                                task.id;
+                            ref.read(timeprovider.notifier).state =
+                                task.focusTime;
+                            context.go('/focus');
+                          }
+                          : null,
                   child: Icon(Icons.center_focus_strong),
                 ),
               ),

@@ -1,6 +1,6 @@
-import 'dart:ui';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:noslack/screens/StatsScreen.dart';
@@ -41,6 +41,7 @@ final _router = GoRouter(
         GoRoute(path: '/more', builder: (context, state) => MorePage()),
       ],
     ),
+    GoRoute(path: '/more', builder: (context, state) => MorePage()),
   ],
 );
 
@@ -57,16 +58,31 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class MainScaffold extends StatelessWidget {
+class MainScaffold extends StatefulWidget {
   final Widget child;
 
   const MainScaffold({super.key, required this.child});
 
   @override
+  State<MainScaffold> createState() => _MainScaffoldState();
+}
+
+class _MainScaffoldState extends State<MainScaffold> {
+  @override
+  void initState() {
+    super.initState();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("No Nonsense")),
-      body: child,
+      // appBar: AppBar(title: const Text("No Nonsense")),
+      body: widget.child,
       bottomNavigationBar: Container(
         padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(borderRadius: BorderRadius.circular(20)),
@@ -129,4 +145,3 @@ class MainScaffold extends StatelessWidget {
     return 0;
   }
 }
-

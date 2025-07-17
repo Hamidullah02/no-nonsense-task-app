@@ -5,9 +5,9 @@ import 'package:noslack/widgets/home_widget/tag_btns.dart';
 
 class editTaskWidget extends ConsumerStatefulWidget {
   final Task task;
-  final index;
+  final int index;
 
-  editTaskWidget(this.task, this.index, {super.key});
+  const editTaskWidget(this.task, this.index, {super.key});
 
   @override
   ConsumerState<editTaskWidget> createState() => _editTaskWidgetState();
@@ -18,13 +18,15 @@ class _editTaskWidgetState extends ConsumerState<editTaskWidget> {
   final tagController = TextEditingController();
   final dueDateContoller = TextEditingController();
   final noteContoller = TextEditingController();
+  final focusTimeController = TextEditingController();
 
   @override
   void initState() {
     titlecontroller.text = widget.task.title;
     tagController.text = widget.task.tags;
-    dueDateContoller.text = widget.task.dueDate!;
-    noteContoller.text = widget.task.note ?? '';
+    dueDateContoller.text = widget.task.dueDate ?? '';
+    noteContoller.text = widget.task.note;
+    focusTimeController.text = widget.task.focusTime;
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -41,6 +43,7 @@ class _editTaskWidgetState extends ConsumerState<editTaskWidget> {
     tagController.dispose();
     dueDateContoller.dispose();
     noteContoller.dispose();
+    focusTimeController.dispose();
     super.dispose();
   }
 
@@ -48,11 +51,157 @@ class _editTaskWidgetState extends ConsumerState<editTaskWidget> {
     ref.read(selectedtagProvider.notifier).state = null;
   }
 
-  void _closeDialog({bool taskSaved = false}) {
-    if (!taskSaved) {
-      _resetTagSelection();
+  // Format time(e.g., "1h 30m")
+  String _formatDuration(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+
+    if (hours > 0 && minutes > 0) {
+      return '${hours}h ${minutes}m';
+    } else if (hours > 0) {
+      return '${hours}h';
+    } else if (minutes > 0) {
+      return '${minutes}m';
+    } else {
+      return '0m';
     }
-    Navigator.of(context).pop();
+  }
+
+  Future<void> _showDurationPicker() async {
+    int selectedHours = 0;
+    int selectedMinutes = 30;
+
+    if (focusTimeController.text.isNotEmpty) {
+      final parts = focusTimeController.text.split(' ');
+      for (String part in parts) {
+        if (part.endsWith('h')) {
+          selectedHours = int.tryParse(part.replaceAll('h', '')) ?? 0;
+        } else if (part.endsWith('m')) {
+          selectedMinutes = int.tryParse(part.replaceAll('m', '')) ?? 0;
+        }
+      }
+    }
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF1E1E2E),
+          title: const Text(
+            'Set Focus Time',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Hours picker
+              Row(
+                children: [
+                  const Text(
+                    'Hours: ',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  Expanded(
+                    child: Slider(
+                      value: selectedHours.toDouble(),
+                      min: 0,
+                      max: 8,
+                      divisions: 8,
+                      activeColor: const Color(0xFF64D2FF),
+                      label: selectedHours.toString(),
+                      onChanged: (value) {
+                        setDialogState(() {
+                          selectedHours = value.round();
+                        });
+                      },
+                    ),
+                  ),
+                  Text(
+                    '${selectedHours}h',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // Minutes picker
+              Row(
+                children: [
+                  const Text(
+                    'Minutes: ',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  Expanded(
+                    child: Slider(
+                      value: selectedMinutes.toDouble(),
+                      min: 0,
+                      max: 59,
+                      divisions: 59,
+                      activeColor: const Color(0xFF64D2FF),
+                      label: selectedMinutes.toString(),
+                      onChanged: (value) {
+                        setDialogState(() {
+                          selectedMinutes = value.round();
+                        });
+                      },
+                    ),
+                  ),
+                  Text(
+                    '${selectedMinutes}m',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // Preview
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2A2A40),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Focus Time: ${_formatDuration(Duration(hours: selectedHours, minutes: selectedMinutes))}',
+                  style: const TextStyle(
+                    color: Color(0xFF64D2FF),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                focusTimeController.text = '';
+                Navigator.of(context).pop();
+              },
+              child: const Text('Clear'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final duration = Duration(
+                  hours: selectedHours,
+                  minutes: selectedMinutes,
+                );
+                focusTimeController.text = _formatDuration(duration);
+                Navigator.of(context).pop();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF64D2FF),
+              ),
+              child: const Text(
+                'Set',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -64,58 +213,89 @@ class _editTaskWidgetState extends ConsumerState<editTaskWidget> {
         }
       },
       child: AlertDialog(
-        backgroundColor: Color(0xFF1E1E2E),
+        backgroundColor: const Color(0xFF1E1E2E),
         content: ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: 600),
+          constraints: const BoxConstraints(maxHeight: 600),
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Center(
+                const Center(
                   child: Text(
                     "Edit Task",
                     style: TextStyle(fontSize: 25, color: Colors.white),
                   ),
                 ),
                 const SizedBox(height: 15),
-                _buildEditField("title", titlecontroller),
+                _buildEditField("Title", titlecontroller),
                 const SizedBox(height: 12),
                 TagSelector(controller: tagController, label: "Select Tag:"),
                 const SizedBox(height: 12),
-                _buildEditField("tag", tagController),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: dueDateContoller,
-                  readOnly: true,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    labelText: "Due Date",
-                    labelStyle: const TextStyle(color: Colors.grey),
-                    filled: true,
-                    fillColor: const Color(0xFF2A2A40),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+
+                // Date and Focus Time Row
+                Row(
+                  children: [
+                    // Due Date Field
+                    Expanded(
+                      child: TextField(
+                        controller: dueDateContoller,
+                        readOnly: true,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: "Due Date",
+                          labelStyle: const TextStyle(color: Colors.grey),
+                          filled: true,
+                          fillColor: const Color(0xFF2A2A40),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          suffixIcon: const Icon(
+                            Icons.calendar_today,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        onTap: () async {
+                          DateTime? pickDate = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime.now(),
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2100),
+                          );
+                          if (pickDate != null) {
+                            dueDateContoller.text =
+                            pickDate.toIso8601String().split("T")[0];
+                          }
+                        },
+                      ),
                     ),
-                    suffixIcon: const Icon(
-                      Icons.calendar_today,
-                      color: Colors.grey,
+                    const SizedBox(width: 12),
+                    // Focus Time Field
+                    Expanded(
+                      child: TextField(
+                        controller: focusTimeController,
+                        readOnly: true,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: "Focus Time",
+                          labelStyle: const TextStyle(color: Colors.grey),
+                          filled: true,
+                          fillColor: const Color(0xFF2A2A40),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          suffixIcon: const Icon(
+                            Icons.timer,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        onTap: _showDurationPicker,
+                      ),
                     ),
-                  ),
-                  onTap: () async {
-                    DateTime? pickDate = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime(2100),
-                    );
-                    if (pickDate != null) {
-                      dueDateContoller.text =
-                          pickDate.toIso8601String().split("T")[0];
-                    }
-                  },
+                  ],
                 ),
+
                 const SizedBox(height: 12),
-                _buildEditField("add note", noteContoller),
+                _buildEditField("Add note", noteContoller, maxLines: 3),
               ],
             ),
           ),
@@ -123,9 +303,10 @@ class _editTaskWidgetState extends ConsumerState<editTaskWidget> {
         actions: [
           TextButton(
             onPressed: () {
+              _resetTagSelection();
               Navigator.of(context).pop();
             },
-            child: Text("Cencel"),
+            child: const Text("Cancel"),
           ),
           ElevatedButton(
             onPressed: () {
@@ -133,34 +314,39 @@ class _editTaskWidgetState extends ConsumerState<editTaskWidget> {
                 title: titlecontroller.text.trim(),
                 tags: tagController.text.trim(),
                 dueDate: dueDateContoller.text.trim(),
+                focusTime: focusTimeController.text.trim(),
                 note: noteContoller.text.trim(),
               );
               ref.read(taskListProvider.notifier).editTask(task, widget.index);
+              _resetTagSelection();
               Navigator.of(context).pop();
             },
-            child: Text("Save", style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF64D2FF),
+            ),
+            child: const Text("Save", style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
   }
-}
 
-Widget _buildEditField(
-  String label,
-  TextEditingController controller, {
-  int maxLines = 1,
-}) {
-  return TextField(
-    controller: controller,
-    maxLines: maxLines,
-    style: const TextStyle(color: Colors.white),
-    decoration: InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: Colors.grey),
-      filled: true,
-      fillColor: const Color(0xFF2A2A40),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-    ),
-  );
+  Widget _buildEditField(
+      String label,
+      TextEditingController controller, {
+        int maxLines = 1,
+      }) {
+    return TextField(
+      controller: controller,
+      maxLines: maxLines,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: Colors.grey),
+        filled: true,
+        fillColor: const Color(0xFF2A2A40),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
 }

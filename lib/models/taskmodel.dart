@@ -20,7 +20,7 @@ class Task {
     this.tags = '',
     this.dueDate = "__-__-__",
     this.note = 'no description',
-    this.focusTime='set time',
+    this.focusTime = 'set time',
   });
 
   factory Task.fromFireStore(DocumentSnapshot doc) {
@@ -32,7 +32,7 @@ class Task {
       tags: data['tags'] ?? '',
       note: data['note'] ?? '',
       dueDate: data['dueDate'] ?? '__-__-__',
-      focusTime: data['focusTime']??'time',
+      focusTime: data['focusTime'] ?? 'time',
     );
   }
 
@@ -43,7 +43,7 @@ class Task {
       'tags': tags,
       'note': note,
       'dueDate': dueDate,
-      'focusTime':focusTime
+      'focusTime': focusTime,
     };
   }
 
@@ -54,7 +54,7 @@ class Task {
     String? tags,
     String? note,
     String? dueDate,
-    String? focustime
+    String? focustime,
   }) {
     return Task(
       id: id ?? this.id,
@@ -63,7 +63,7 @@ class Task {
       tags: tags ?? this.tags,
       note: note ?? this.note,
       dueDate: dueDate ?? this.dueDate,
-      focusTime: focustime??this.focusTime,
+      focusTime: focustime ?? this.focusTime,
     );
   }
 }
@@ -98,16 +98,15 @@ class TaskListNotifier extends StateNotifier<List<Task>> {
     }
   }
 
-  Future<void> removeTask(int index) async {
-    if (index < 0 || index >= state.length) return;
-    final task = state[index];
+  Future<void> removeTask(String id) async {
     try {
-      await _tasks.doc(task.id).delete();
-      state = [...state]..removeAt(index);
+      await _tasks.doc(id).delete();
+      state = state.where((t) => t.id != id).toList();
     } catch (e) {
       print(e);
     }
   }
+
 
   Future<void> editTask(Task updatedTask, int index) async {
     try {
@@ -123,16 +122,20 @@ class TaskListNotifier extends StateNotifier<List<Task>> {
     }
   }
 
-  Future<void> toggleDone(int index) async {
+  Future<void> toggleDoneById(String id) async{
+    final index =state.indexWhere((t)=> t.id==id);
+    if(index == -1 )return;
     final task = state[index];
-    final updatedTasktoggle = task.copyWith(isDone: !task.isDone);
-    try {
-      await _tasks.doc(task.id).update({'isDone': updatedTasktoggle.isDone});
-      state = [
+    final updatedTask =task.copyWith(isDone: !task.isDone);
+
+    try{
+      await _tasks.doc(task.id).update({'isDone' : updatedTask.isDone});
+      state =[
         for (int i = 0; i < state.length; i++)
-          if (i == index) updatedTasktoggle else state[i],
+          if (i == index) updatedTask else state[i],
       ];
-    } catch (e) {
+    }
+    catch(e){
       print(e);
     }
   }
@@ -148,6 +151,12 @@ final taskListProvider = StateNotifierProvider<TaskListNotifier, List<Task>>((
   return TaskListNotifier();
 });
 
-
 final selectedtagProvider = StateProvider<String?>((ref) => null);
 final selectedColorProvider = StateProvider<Color>((ref) => Colors.grey);
+final timeprovider = StateProvider<String?>((ref) => null);
+
+
+
+
+
+
