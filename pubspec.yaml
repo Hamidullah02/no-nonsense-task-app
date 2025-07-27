@@ -40,8 +40,18 @@ dependencies:
   firebase_core:
   cloud_firestore:
   firebase_auth:
-  slide_countdown:
   anim_search_bar: ^2.0.3
+  usage_stats:
+  app_usage:
+  android_intent_plus:
+  permission_handler:
+  flutter_launcher_icons:
+
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/logo.png"
 
 dev_dependencies:
   flutter_test:

@@ -9,6 +9,7 @@ import 'package:noslack/screens/homeScreen.dart';
 import 'package:noslack/screens/moreScreen.dart';
 import 'package:noslack/screens/usageScreen.dart';
 import 'package:noslack/themedata.dart';
+import 'package:noslack/widgets/bottomnav_widget.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -60,13 +61,10 @@ class MyApp extends StatelessWidget {
 
 class MainScaffold extends StatefulWidget {
   final Widget child;
-
   const MainScaffold({super.key, required this.child});
-
   @override
   State<MainScaffold> createState() => _MainScaffoldState();
 }
-
 class _MainScaffoldState extends State<MainScaffold> {
   @override
   void initState() {
@@ -81,67 +79,12 @@ class _MainScaffoldState extends State<MainScaffold> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // appBar: AppBar(title: const Text("No Nonsense")),
       body: widget.child,
-      bottomNavigationBar: Container(
-        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(20)),
-        child: BottomNavigationBar(
-          backgroundColor: Color.fromARGB(255, 41, 38, 44).withOpacity(.3),
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: const Color(0xFF64D2FF),
-          unselectedItemColor: Colors.grey,
-          currentIndex: _getIndex(context),
-          onTap: (index) {
-            switch (index) {
-              case 0:
-                context.go('/home');
-                break;
-              case 1:
-                context.go('/usage');
-                break;
-              case 2:
-                context.go('/focus');
-                break;
-              case 3:
-                context.go('/stats');
-                break;
-              case 4:
-                context.go('/more');
-                break;
-            }
-          },
-
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.task), label: "Tasks"),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.data_usage),
-              label: "Usage",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.center_focus_strong_outlined),
-              label: "Focus",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.query_stats),
-              label: "Stats",
-            ),
-            BottomNavigationBarItem(icon: Icon(Icons.settings), label: "More"),
-          ],
-        ),
-      ),
+      bottomNavigationBar: CustomBottomNav(parentContext: context),
     );
   }
-
-  int _getIndex(BuildContext context) {
-    final location = GoRouterState.of(context).uri.toString();
-    print('Current path: ${GoRouterState.of(context).uri.path}');
-
-    if (location == '/home') return 0;
-    if (location == '/usage') return 1;
-    if (location == '/focus') return 2;
-    if (location == '/stats') return 3;
-    if (location == '/more') return 4;
-    return 0;
-  }
 }
+
+
+
+
